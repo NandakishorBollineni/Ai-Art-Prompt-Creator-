@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Art Prompt Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            width: 600px;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #444;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            resize: none;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background-color: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #5a67d8;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+            text-align: left;
+        }
+
+        #loading {
+            display: none;
+            margin-top: 20px;
+            font-size: 16px;
+            color: #667eea;
+        }
+        .ai-chat-messages {
+    margin-bottom: 30px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+    padding-left: 5px;
+}
+
+.ai-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+    animation: fadeIn 0.5s ease;
+}
+
+.ai-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #3b82f6); /* A soft blue gradient */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.ai-message-content {
+    background-color: #f9fafb;
+    padding: 14px 18px;
+    border-radius: 16px;
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    flex-grow: 1;
+}
+
+/* Optional: Smooth fade-in effect */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Art Prompt Creator</h1>
+        <div class="ai-container">
+            <div class="ai-chat-messages">
+              <div class="ai-message">
+                  <div class="ai-avatar">AI</div>
+                  <div class="ai-message-content">
+                    Hello! Describe your art idea (e.g., "A futuristic city at sunset") and I'll create a unique prompt for you.
+                  </div>
+              </div>
+            </div>
+        <textarea id="userInput" placeholder="Describe your art idea (e.g., 'A futuristic city at sunset')"></textarea>
+        <br>
+        <button onclick="generatePrompt()">Generate Prompt</button>
+        <div id="loading">Generating...</div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+        const API_KEY = 'AIzaSyD5fpkAyZfzLfs6XRpDWE_5OUpWVWbtBjM'; // WARNING: Exposed in client-side code
+
+        async function generatePrompt() {
+            const userInput = document.getElementById('userInput').value.trim();
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+
+            if (!userInput) {
+                resultDiv.innerHTML = '<span style="color: #dc2626;">Please enter an art idea!</span>';
+                return;
+            }
+
+            loadingDiv.style.display = 'block';
+            resultDiv.innerHTML = '';
+
+            try {
+                // Construct prompt for concise art generation
+                const prompt = `Generate a concise, vivid art prompt (50-100 words) as a single paragraph based on the idea: "${userInput}". Describe a scene suitable for digital or traditional art, including the setting, mood, colors, and a specific art style (e.g., surrealism, cyberpunk, impressionism). Focus on evocative imagery and a cohesive description, without breaking into sections like mood or colors. Ensure the tone is inspiring and artistic.`;
+
+                // Prepare request body
+                const requestBody = {
+                    contents: [
+                        {
+                            parts: [
+                                { text: prompt }
+                            ]
+                        }
+                    ]
+                };
+
+                // Send request to Gemini API
+                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+                if (!generatedText) {
+                    throw new Error('No valid response from Gemini API');
+                }
+
+                // Display the generated prompt
+                resultDiv.innerHTML = generatedText.replace(/\n/g, '<br>');
+            } catch (error) {
+                console.error('Error generating prompt:', error);
+                resultDiv.innerHTML = `<span style="color: #dc2626;">Error: Could not generate prompt: ${error.message}. Please try again.</span>`;
+            } finally {
+                loadingDiv.style.display = 'none';
+                 
+            }
+        }
+
+        // Allow Enter key to trigger prompt generation
+        document.getElementById('userInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generatePrompt();
+            }
+        });
+    </script>
+</body>
+</html>
+
